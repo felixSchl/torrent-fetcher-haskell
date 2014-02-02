@@ -1,14 +1,37 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 import System.IO.Error(isDoesNotExistError)
 import Control.Exception (try)
 import System.Environment (getArgs)
 import Data.Map (Map, fromList)
+import Data.String.Utils(replace)
 import Network.HTTP(simpleHTTP, getRequest, getResponseBody)
+import Data.Aeson ((.:), (.:?), decode, FromJSON(..), Value(..))
+import Control.Applicative ((<$>), (<*>))
+import qualified Data.ByteString.Lazy.Char8 as BS
 
 createCacheFile :: FilePath -> IO(Bool)
 createCacheFile path = return(False)
 
 type Action = [String] -> IO()
 type Arguments = [String]
+
+data MovieList = MovieList { movies :: [Movie]
+                           }
+                           deriving (Show)
+instance FromJSON MovieList where
+    parseJSON (Object v) =
+        MovieList <$>
+            (v .: "MovieList")
+data Movie = Movie { movieID :: String
+                   , movieTitle :: String
+                   }
+                   deriving (Show)
+instance FromJSON Movie where
+    parseJSON (Object v) =
+        Movie <$>
+            (v .: "MovieID")    <*>
+            (v .: "MovieTitle")
 
 -- Constants
 cacheFilename = ".cache"
@@ -26,6 +49,14 @@ getCacheContents = do
         Right val -> do
             return (val)
 
+-- Returns the in-memory version of the list
+getCachedMovieList :: IO (Maybe MovieList)
+getCachedMovieList = do
+    contents <- getCacheContents
+    let json = BS.pack $ replace "\\" "" contents
+    return (decode json)
+
+-- Write the last list to file
 writeToCache :: String -> IO (Bool)
 writeToCache s = do
     result <- try (writeFile cacheFilename s) :: IO (Either IOError ())
@@ -44,8 +75,8 @@ wrapAction name action args = do
 -- Show last list
 showlast :: Action
 showlast args = do
-    contents <- getCacheContents
-    putStrLn contents
+    ml <- getCachedMovieList
+    print ml
     return()
 
 -- Download from last list
