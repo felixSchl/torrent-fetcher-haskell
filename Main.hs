@@ -2,6 +2,7 @@ import System.IO.Error(isDoesNotExistError)
 import Control.Exception (try)
 import System.Environment (getArgs)
 import Data.Map (Map, fromList)
+import Network.HTTP(simpleHTTP, getRequest, getResponseBody)
 
 createCacheFile :: FilePath -> IO(Bool)
 createCacheFile path = return(False)
@@ -9,8 +10,9 @@ createCacheFile path = return(False)
 type Action = [String] -> IO()
 type Arguments = [String]
 
-cacheFilename :: String
+-- Constants
 cacheFilename = ".cache"
+server = "http://yts.re/api/"
 
 -- Returns the currently cached list
 getCacheContents :: IO String
@@ -23,6 +25,15 @@ getCacheContents = do
                     return ("")
         Right val -> do
             return (val)
+
+writeToCache :: String -> IO (Bool)
+writeToCache s = do
+    result <- try (writeFile cacheFilename s) :: IO (Either IOError ())
+    case result of
+        Left ex -> do
+            return (False)
+        Right val -> do
+            return (True)
 
 -- Debug wrapper
 wrapAction :: String -> Action -> Arguments -> IO ()
@@ -45,7 +56,11 @@ download args = do
 -- Create a new list from a search
 search :: Action
 search args = do
+    response <- simpleHTTP (getRequest (server ++ "list.json"))
+    json <- getResponseBody response
+    writeToCache json
     return()
+
 
 -- Routes the input arguments to actions
 executeRoute :: [String] -> IO ()
