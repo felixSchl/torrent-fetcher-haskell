@@ -16,15 +16,15 @@ createCacheFile path = return(False)
 type Action = [String] -> IO()
 type Arguments = [String]
 
-data MovieList = MovieList { movies :: [Movie]
+data MovieList = MovieList { getMovies :: [Movie]
                            }
                            deriving (Show)
 instance FromJSON MovieList where
     parseJSON (Object v) =
         MovieList <$>
             (v .: "MovieList")
-data Movie = Movie { movieID :: String
-                   , movieTitle :: String
+data Movie = Movie { getMovieID :: String
+                   , getMovieTitle :: String
                    }
                    deriving (Show)
 instance FromJSON Movie where
@@ -72,11 +72,23 @@ wrapAction name action args = do
     putStrLn $ "Executing " ++ name ++ "..."
     action args
 
+-- Print movie list
+printMovies :: [Movie] -> IO ()
+printMovies (movie:xs) = do
+    putStrLn $ getMovieTitle movie
+    printMovies xs
+printMovies [] = return()
+
 -- Show last list
 showlast :: Action
 showlast args = do
-    ml <- getCachedMovieList
-    print ml
+    result <- getCachedMovieList
+    case result of
+        Just m -> do
+            printMovies $ getMovies m
+        -- XXX: Propagate reason of failure, e.g. could not deserialize or
+        -- no existing cache etc.:
+        Nothing -> error "No movie list"
     return()
 
 -- Download from last list
@@ -91,7 +103,6 @@ search args = do
     json <- getResponseBody response
     writeToCache json
     return()
-
 
 -- Routes the input arguments to actions
 executeRoute :: [String] -> IO ()
