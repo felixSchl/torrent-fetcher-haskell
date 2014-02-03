@@ -1,4 +1,4 @@
-module Cli(printMovies, getMovieListFormat)
+module Cli(printMovieTable)
 where
 
 import Models(Movie(..), MovieList(..))
@@ -8,8 +8,14 @@ data ListFormat = ListFormat { getIdWidth :: Int
                              , getTitleWidth :: Int
                              }
 -- Print movie list
-printMovies :: [Movie] -> ListFormat -> IO ()
-printMovies (m:xs) format = do
+printMovieTable :: MovieList -> IO ()
+printMovieTable ml = do
+    let movies = getMovies ml
+    let format = getMovieListFormat movies
+    printMovieRows movies format
+
+printMovieRows :: [Movie] -> ListFormat -> IO ()
+printMovieRows (m:xs) format = do
     let id = getMovieID m
     let title = getMovieTitle m
 
@@ -19,8 +25,8 @@ printMovies (m:xs) format = do
     let s = col1 ++ col2
     putStrLn s
 
-    printMovies xs format
-printMovies _ _ = return ()
+    printMovieRows xs format
+printMovieRows _ _ = return ()
 
 getMovieListFormat :: [Movie] -> ListFormat
 getMovieListFormat movies@(m:xs) = do

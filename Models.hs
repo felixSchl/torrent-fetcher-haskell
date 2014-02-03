@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Models (MovieList(..), Movie(..))
+module Models (MovieList(..), Movie(..), getMovieById)
 where
 
 import Data.Aeson ((.:), (.:?), FromJSON(..), Value(..))
@@ -14,6 +14,12 @@ instance FromJSON MovieList where
     parseJSON (Object v) =
         MovieList <$>
             (v .: "MovieList")
+
+getMovieById :: MovieList -> String -> Maybe Movie
+getMovieById ml id = do
+    let movies = getMovies ml
+    let movies' = filter (\m -> getMovieID m == id) movies
+    if length movies' > 0 then Just(head movies') else Nothing
 
 -- A single Movie
 data Movie = Movie { getMovieID :: String
