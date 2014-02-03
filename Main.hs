@@ -1,11 +1,9 @@
 
 import System.Environment (getArgs)
-
-import Models(Movie(..), MovieList(..))
-import Router(exeFromArgs)
+import qualified Router as Router
 
 main :: IO()
 main = do
     arguments <- getArgs
-    exeFromArgs arguments
+    Router.execute arguments
     return()

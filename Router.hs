@@ -1,4 +1,4 @@
-module Router (exeFromArgs)
+module Router (execute)
 where
 
 import Types
@@ -7,11 +7,11 @@ import Routes.Search(search)
 import Routes.ShowLast(showlast)
 
 -- Routes the input arguments to actions
-exeFromArgs :: [String] -> IO ()
-exeFromArgs ("show":     args) = wrapAction "show" showlast args
-exeFromArgs ("download": args) = wrapAction "download" download args
-exeFromArgs ("search":   args) = wrapAction "search" search args
-exeFromArgs []                 = error "No arguments provided"
+execute :: [String] -> IO ()
+execute ("show":     args) = wrapAction "show" showlast args
+execute ("download": args) = wrapAction "download" download args
+execute ("search":   args) = wrapAction "search" search args
+execute []                 = error "No arguments provided"
 
 -- Debug wrapper
 wrapAction :: String -> Action -> Arguments -> IO ()
