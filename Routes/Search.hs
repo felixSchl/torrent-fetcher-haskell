@@ -3,13 +3,14 @@ where
 
 import Config
 import Types
+import Util(writeToCache)
 import Network.HTTP(simpleHTTP, getRequest, getResponseBody)
 import Config(cacheFilename, server)
 import System.Exit(exitWith, ExitCode(..))
 import System.IO(stderr, hPutStrLn)
 import System.Environment(getProgName)
 import System.Console.GetOpt(usageInfo, ArgOrder(..), getOpt, OptDescr(..), ArgDescr(..))
-import Util(writeToCache)
+import Data.String.Utils(join)
 import Data.Char(toLower)
 import qualified Data.ByteString.Char8 as BS
 import Network.HTTP.Types(renderQuery, Query(..), QueryItem(..))
@@ -20,7 +21,9 @@ data Sorting = Date | Seeds | Peers | Size | Alphabet |
                Rating | Download | Year
                deriving (Show, Enum)
 data Order = Asc | Desc deriving (Show, Enum)
-data Genre = AllGenres deriving (Show, Enum)
+data Genre = AllGenres deriving (Enum)
+instance Show Genre where
+    show AllGenres = "ALL"
 data Quality = QAll | Q720P | Q1080P | Q3D deriving (Enum)
 instance Show Quality where
     show Q720P  = "720p"
@@ -149,8 +152,11 @@ options =
     ]
 
 q :: (Show b) => String -> (Maybe b) -> QueryItem
-q name Nothing      = (BS.pack name, Nothing)::QueryItem
-q name (Just value) = (BS.pack name, Just (BS.pack $ show value))::QueryItem
+q name Nothing           = (BS.pack name, Nothing)::QueryItem
+q name (Just v)          = (BS.pack name, Just (BS.pack $ show v))::QueryItem
+
+q' :: String -> String -> QueryItem
+q' name value = (BS.pack name, Just (BS.pack value))::QueryItem
 
 -- Create a new list from a search
 search :: Action
@@ -166,14 +172,16 @@ search args = do
                 , optOrder = order
                 } = opts
 
-    putStrLn ("Limit: " ++ (show limit))
-    putStrLn ("Set: " ++ (show set))
-    putStrLn ("Quality: " ++ (show quality))
-    putStrLn ("Rating: " ++ (show rating))
-    putStrLn ("Genre: " ++ (show genre))
-    putStrLn ("Sort: " ++ (show sort))
-    putStrLn ("Order: " ++ (show order))
-
+    -- putStrLn ("Limit: " ++ (show limit))
+    -- putStrLn ("Set: " ++ (show set))
+    -- putStrLn ("Quality: " ++ (show quality))
+    -- putStrLn ("Rating: " ++ (show rating))
+    -- putStrLn ("Genre: " ++ (show genre))
+    -- putStrLn ("Sort: " ++ (show sort))
+    -- putStrLn ("Order: " ++ (show order))
+    
+    let keywords = join " " nonOptions
+    print keywords
     -- Create the query string
     let query = [ q "limit" (Just limit)
                 , q "set" (Just set)
@@ -182,12 +190,15 @@ search args = do
                 , q "genre" (Just genre)
                 , q "sort" (Just sort)
                 , q "order" (Just order)
+                , q' "keywords" keywords
                 ] :: Query
 
     let queryString = renderQuery False query
-    let fullUrl = server ++ "list.json" ++ "?" ++ (BS.unpack queryString)
+    -- print queryString
+    let fullUrl = server ++ "list.json?" ++ (BS.unpack queryString)
     response <- simpleHTTP (getRequest fullUrl)
     json <- getResponseBody response
+    -- putStrLn json
     writeToCache json
 
     return()
