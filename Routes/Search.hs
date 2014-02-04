@@ -1,6 +1,8 @@
+-- vim: set fdm=marker :
 module Routes.Search (search)
 where
 
+-- import {{{
 import Config
 import Types
 import Util(writeToCache)
@@ -14,22 +16,29 @@ import Data.String.Utils(join)
 import Data.Char(toLower)
 import qualified Data.ByteString.Char8 as BS
 import Network.HTTP.Types(renderQuery, Query(..), QueryItem(..))
-
+-- }}}
+-- data {{{
 type Keywords = [String]
-type Rating = Integer
-data Sorting = Date | Seeds | Peers | Size | Alphabet |
-               Rating | Download | Year
-               deriving (Show, Enum)
-data Order = Asc | Desc deriving (Show, Enum)
-data Genre = AllGenres deriving (Enum)
-instance Show Genre where
-    show AllGenres = "ALL"
-data Quality = QAll | Q720P | Q1080P | Q3D deriving (Enum)
-instance Show Quality where
-    show Q720P  = "720p"
-    show Q1080P = "1080p"
-    show Q3D    = "3D"
-    show QAll   = "ALL"
+type Rating   = Integer
+data Sorting  = Date
+              | Seeds
+              | Peers
+              | Size
+              | Alphabet
+              | Rating
+              | Download
+              | Year
+              deriving (Show, Enum)
+data Order    = Asc
+              | Desc
+              deriving (Show, Enum)
+data Genre    = AllGenres
+              deriving (Enum)
+data Quality  = QAll
+              | Q720P
+              | Q1080P
+              | Q3D
+              deriving (Enum)
 
 data Options = Options { optLimit :: Integer
                        , optSet :: Integer
@@ -40,18 +49,18 @@ data Options = Options { optLimit :: Integer
                        , optSort :: Sorting
                        , optOrder :: Order
                        }
+-- }}}
+-- instances {{{
+instance Show Genre where
+    show AllGenres = "ALL"
 
-startOptions :: Options
-startOptions = Options { optLimit = 50
-                       , optSet = 1
-                       , optQuality = QAll
-                       , optRating = 0
-                       , optKeywords = []
-                       , optGenre = AllGenres
-                       , optSort = Date
-                       , optOrder = Desc
-                       }
-
+instance Show Quality where
+    show Q720P  = "720p"
+    show Q1080P = "1080p"
+    show Q3D    = "3D"
+    show QAll   = "ALL"
+-- }}}
+-- util {{{
 getSortingFromString :: String -> Sorting
 getSortingFromString s
     | ls == "date"    = Date
@@ -90,6 +99,16 @@ getQualityFromString s
 getInRange :: Integer -> Integer -> Integer -> Integer
 getInRange lower upper n = maximum([lower, minimum([upper, n])])
 
+-- Convenience function to make a QueryItem
+q :: (Show b) => String -> (Maybe b) -> QueryItem
+q name Nothing           = (BS.pack name, Nothing)::QueryItem
+q name (Just v)          = (BS.pack name, Just (BS.pack $ show v))::QueryItem
+
+-- Same as `q`, but not using "show" for Strings
+q' :: String -> String -> QueryItem
+q' name value = (BS.pack name, Just (BS.pack value))::QueryItem
+-- }}}
+-- GetOpt {{{
 options :: [OptDescr (Options -> IO Options)]
 options = 
     [ Option "l" ["limit"]
@@ -150,17 +169,22 @@ options =
             ))
         "Show help"
     ]
+-- }}}
 
-q :: (Show b) => String -> (Maybe b) -> QueryItem
-q name Nothing           = (BS.pack name, Nothing)::QueryItem
-q name (Just v)          = (BS.pack name, Just (BS.pack $ show v))::QueryItem
+startOptions :: Options
+startOptions = Options { optLimit = 50
+                       , optSet = 1
+                       , optQuality = QAll
+                       , optRating = 0
+                       , optKeywords = []
+                       , optGenre = AllGenres
+                       , optSort = Date
+                       , optOrder = Desc
+                       }
 
-q' :: String -> String -> QueryItem
-q' name value = (BS.pack name, Just (BS.pack value))::QueryItem
-
--- Create a new list from a search
 search :: Action
 search args = do
+    -- Parse the options
     let (actions, nonOptions, errors) = getOpt RequireOrder options args
     opts <- foldl (>>=) (return startOptions) actions
     let Options { optLimit = limit
@@ -172,16 +196,6 @@ search args = do
                 , optOrder = order
                 } = opts
 
-    -- putStrLn ("Limit: " ++ (show limit))
-    -- putStrLn ("Set: " ++ (show set))
-    -- putStrLn ("Quality: " ++ (show quality))
-    -- putStrLn ("Rating: " ++ (show rating))
-    -- putStrLn ("Genre: " ++ (show genre))
-    -- putStrLn ("Sort: " ++ (show sort))
-    -- putStrLn ("Order: " ++ (show order))
-    
-    let keywords = join " " nonOptions
-    print keywords
     -- Create the query string
     let query = [ q "limit" (Just limit)
                 , q "set" (Just set)
@@ -190,15 +204,13 @@ search args = do
                 , q "genre" (Just genre)
                 , q "sort" (Just sort)
                 , q "order" (Just order)
-                , q' "keywords" keywords
+                , q' "keywords" (join " " nonOptions)
                 ] :: Query
 
     let queryString = renderQuery False query
-    -- print queryString
     let fullUrl = server ++ "list.json?" ++ (BS.unpack queryString)
     response <- simpleHTTP (getRequest fullUrl)
     json <- getResponseBody response
-    -- putStrLn json
     writeToCache json
 
     return()
