@@ -5,7 +5,10 @@ where
 -- import {{{
 import Config
 import Types
-import Util(writeToCache)
+import Models(MovieList)
+import Cli(printMovieTable)
+import Routes.ShowLast(showlast)
+import Util(writeToCache, getMovieList)
 import Network.HTTP(simpleHTTP, getRequest, getResponseBody)
 import Config(cacheFilename, server)
 import System.Exit(exitWith, ExitCode(..))
@@ -213,5 +216,11 @@ search args = do
     json <- getResponseBody response
     writeToCache json
 
-    return()
+    let maybeMovieList = getMovieList json
+    case maybeMovieList of
+        (Just ml) -> do
+            printMovieTable ml
+        Nothing -> do
+            hPutStrLn stderr "No movies found!"
 
+    return()

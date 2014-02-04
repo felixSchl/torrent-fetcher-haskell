@@ -1,4 +1,7 @@
-module Util (getCacheContents, getCachedMovieList, writeToCache)
+module Util ( getCacheContents
+            , getCachedMovieList
+            , getMovieList
+            , writeToCache)
 where
 
 import Config
@@ -25,8 +28,13 @@ getCacheContents = do
 getCachedMovieList :: IO (Maybe MovieList)
 getCachedMovieList = do
     contents <- getCacheContents
+    return (getMovieList contents)
+
+-- Returns the in-memory version of the list
+getMovieList :: String -> Maybe MovieList
+getMovieList contents = do
     let json = BS.pack $ replace "\\" "" contents
-    return (decode json)
+    decode json
 
 -- Write the last list to file
 writeToCache :: String -> IO (Bool)
