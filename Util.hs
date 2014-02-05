@@ -1,11 +1,12 @@
 module Util ( getCacheContents
             , getCachedMovieList
             , getMovieList
+            , getMovieDetails
             , writeToCache)
 where
 
 import Config
-import Models(Movie, MovieList)
+import Models(Movie, MovieList, MovieDetails)
 import System.IO.Error(isDoesNotExistError)
 import Control.Exception (try)
 import Data.String.Utils(replace)
@@ -33,6 +34,12 @@ getCachedMovieList = do
 -- Returns the in-memory version of the list
 getMovieList :: String -> Maybe MovieList
 getMovieList contents = do
+    let json = BS.pack $ replace "\\" "" contents
+    decode json
+
+-- Retuns the in-memory version of a movie detail
+getMovieDetails :: String -> Maybe MovieDetails
+getMovieDetails contents = do
     let json = BS.pack $ replace "\\" "" contents
     decode json
 

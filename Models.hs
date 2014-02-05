@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Models (MovieList(..), Movie(..), getMovieById)
+module Models (MovieList(..), Movie(..), MovieDetails(..), getMovieById)
 where
 
 import Data.Aeson ((.:), (.:?), FromJSON(..), Value(..))
@@ -31,3 +31,14 @@ instance FromJSON Movie where
         Movie <$>
             (v .: "MovieID")    <*>
             (v .: "MovieTitle")
+
+-- Movie Details
+data MovieDetails = MovieDetails { getMovieUrl :: String
+                                 , getShortDescription :: String
+                                 }
+                                 deriving (Show)
+instance FromJSON MovieDetails where
+    parseJSON (Object v) =
+        MovieDetails <$>
+            (v .: "MovieUrl")    <*>
+            (v .: "ShortDescription")
